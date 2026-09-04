@@ -35,6 +35,7 @@ button:disabled:hover { border-color: #2c2c4a; }
 .track.head .params span { width: 70px; text-align: center; }
 
 #help-btn { padding: 3px 8px; color: var(--dim); }
+.help[hidden] { display: none; }
 .help { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 10; }
 .help-box { background: #0e0e1a; border: 1px solid #2c2c4a; border-radius: 10px; padding: 16px 22px; min-width: 300px; }
 .help-box h2 { margin: 0 0 10px; font-size: 14px; color: var(--acc); }
