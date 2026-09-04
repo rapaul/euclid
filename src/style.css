@@ -6,7 +6,7 @@ html, body { margin: 0; height: 100%; display: flex; flex-direction: column; bac
 #ui.idle { transform: translateY(100%); }
 body.idle { cursor: none; }
 .transport { display: flex; gap: 12px; align-items: center; }
-button { background: rgba(22,22,42,.75); color: var(--fg); border: 1px solid #2c2c4a; padding: 3px 10px; border-radius: 6px; cursor: pointer; font: inherit; }
+button { white-space: nowrap; flex-shrink: 0; background: rgba(22,22,42,.75); color: var(--fg); border: 1px solid #2c2c4a; padding: 3px 10px; border-radius: 6px; cursor: pointer; font: inherit; }
 button:hover { border-color: var(--acc); }
 button[aria-pressed="true"] { background: var(--acc); color: #000; border-color: var(--acc); }
 button.pulse { animation: pulse .3s ease-out; }
@@ -26,10 +26,11 @@ button.pulse { animation: pulse .3s ease-out; }
 input[type=range] { width: 70px; height: 14px; margin: 0; accent-color: var(--acc); }
 .transport input[type=range] { width: 56px; }
 input[type=number] { width: 52px; background: rgba(22,22,42,.75); color: var(--fg); border: 1px solid #2c2c4a; border-radius: 6px; padding: 3px 6px; font: inherit; text-align: center; }
-.transport { flex-wrap: wrap; gap: 8px; }
-.transport .group { display: flex; gap: 10px; align-items: center; }
+.transport { flex-wrap: nowrap; gap: 8px; }
+@media (max-width: 1100px) { .transport { flex-wrap: wrap; } }
+.transport .group { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
 .transport label { display: flex; flex-direction: row-reverse; align-items: center; gap: 5px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
-.transport .viz-name { margin-left: auto; flex: 0 0 auto; color: var(--dim); border-style: dashed; }
+.transport .viz-name { margin-left: auto; flex: 0 1 auto; flex-shrink: 1; min-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); border-style: dashed; }
 .transport .viz-name:hover { color: var(--fg); }
 .transport .sep { width: 1px; height: 20px; background: #2c2c4a; margin: 0 4px; }
 button:disabled { opacity: .35; cursor: default; }

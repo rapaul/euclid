@@ -9,10 +9,12 @@ const HEAD = `#version 300 es
 precision highp float;
 in vec2 uv; out vec4 o;
 uniform sampler2D prev;
-uniform float t, bass, mid, high, beat;
+uniform float t, bass, mid, high, beat, dt;
 uniform vec2 res;
 uniform vec4 ev[8]; // x,y = position, z = age(0..1), w = hue
 #define PI 3.14159265
+// Frames-worth of time elapsed, so decay and energy are tuned for 60fps but frame-rate independent.
+#define FR clamp(dt*60.0, 0.25, 4.0)
 vec3 hsv(float h,float s,float v){ vec3 c=clamp(abs(mod(h*6.+vec3(0,4,2),6.)-3.)-1.,0.,1.); return v*mix(vec3(1),c,s);}
 float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
 `;
@@ -31,7 +33,7 @@ void main(){
   mat2 R = mat2(cos(rot),-sin(rot),sin(rot),cos(rot));
   vec2 fc = R*(c*zoom) + 0.006*vec2(sin(t*0.7+c.y*6.), cos(t*0.9+c.x*6.))*(0.5+high);
   vec3 p = texture(prev, fc/asp+0.5).rgb;
-  p *= 0.93 - 0.02*length(p);
+  p *= pow(0.93 - 0.02*length(p), FR);
   p = mix(p, p.brg, 0.015);
   vec3 add = vec3(0);
   for(int i=0;i<8;i++){
@@ -46,7 +48,7 @@ void main(){
   add += hsv(fract(t*0.03), 0.7, 1.0)*glow;
   float s = sin(k.x*24.+t*2.)*sin(k.y*24.-t*1.3);
   add += hsv(fract(t*0.05+0.5),0.8,1.)*smoothstep(0.9,1.,s)*max(high-0.15,0.0)*0.8;
-  o = vec4(p+add, 1.0);
+  o = vec4(p+add*FR, 1.0);
 }`;
 
 // Washed-out, melting metaballs that slowly forget themselves. Grainy, anxious, faintly analogue.
@@ -56,7 +58,7 @@ void main(){
   vec2 c = (uv-0.5)*asp;
   vec2 warp = 0.004*vec2(sin(t*0.5+uv.y*9.), cos(t*0.4+uv.x*7.))*(1.+mid*3.);
   vec2 fc = c*0.995 + warp + vec2(0., 0.0015);
-  vec3 p = texture(prev, fc/asp+0.5).rgb * 0.955;
+  vec3 p = texture(prev, fc/asp+0.5).rgb*pow(0.955, FR);
   p = mix(p, vec3(dot(p,vec3(.33))), 0.02);
   float field = 0.;
   for(int i=0;i<8;i++){
@@ -72,7 +74,7 @@ void main(){
   float n = hash(floor(uv*res/2.)+floor(t*24.));
   add += (n-0.5)*0.04*(0.3+high);
   add += vec3(0.1,0.2,0.25)*exp(-dot(c,c)*3.)*bass*0.5;
-  o = vec4(max(p+add,0.),1.);
+  o = vec4(max(p+add*FR, 0.), 1.);
 }`;
 
 // Rust and black. Everything spirals down and out; grids throb; sparks are jagged; static bites.
@@ -83,7 +85,7 @@ void main(){
   float rot = -0.02 - beat*0.05;
   mat2 R = mat2(cos(rot),-sin(rot),sin(rot),cos(rot));
   vec2 fc = R*c*1.01 + vec2(0., -0.004);
-  vec3 p = texture(prev, fc/asp+0.5).rgb*0.9;
+  vec3 p = texture(prev, fc/asp+0.5).rgb*pow(0.9, FR);
   p = pow(p, vec3(1.05));
   vec3 add = vec3(0);
   vec2 g = abs(fract(c*8.+t*0.3)-0.5);
@@ -100,7 +102,7 @@ void main(){
   float n = hash(vec2(floor(uv.y*res.y/3.), floor(t*60.)));
   add += vec3(n)*step(0.96,n)*high*0.8;
   add -= vec3(0.02)*dot(c,c);
-  o = vec4(max(p+add,0.),1.);
+  o = vec4(max(p+add*FR, 0.), 1.);
 }`;
 
 // Sweaty 1988 warehouse: checkerboard floor rushing past, acid squiggle, rainbow rings, strobe on the kick.
@@ -109,7 +111,7 @@ void main(){
   vec2 asp = vec2(res.x/res.y,1.);
   vec2 c = (uv-0.5)*asp;
   vec2 fc = c*1.02;
-  vec3 p = texture(prev, fc/asp+0.5).rgb*0.8;
+  vec3 p = texture(prev, fc/asp+0.5).rgb*pow(0.8, FR);
   p = mix(p, p.gbr, 0.03);
   vec3 add = vec3(0);
   if(c.y < -0.05){
@@ -127,7 +129,7 @@ void main(){
     add += hsv(ev[i].w+ev[i].z,0.9,1.)*exp(-ring*ring*3000.)*(1.-ev[i].z)*1.5;
   }
   add += vec3(beat*0.06);
-  o = vec4(p+add,1.);
+  o = vec4(p+add*FR, 1.0);
 }`;
 
 // Red, white and black. A triangular tunnel of bands marching outward, one bold ring per hit.
@@ -144,7 +146,7 @@ void main(){
   float rot = 0.002 + beat*0.01;
   mat2 R = mat2(cos(rot),-sin(rot),sin(rot),cos(rot));
   vec2 fc = R*c*zoom;
-  vec3 p = texture(prev, fc/asp+0.5).rgb*0.84;
+  vec3 p = texture(prev, fc/asp+0.5).rgb*pow(0.84, FR);
   vec3 red = vec3(0.85,0.05,0.05), white = vec3(0.95,0.92,0.88);
   float ang = PI/2. + t*0.05;
   float d = triDist(c, ang);
@@ -160,7 +162,7 @@ void main(){
     add += col * exp(-ring*ring*4000.) * (1.-ev[i].z) * 1.6;
   }
   add += white * exp(-d*d*200.) * beat * 0.4;
-  o = vec4(p+add,1.);
+  o = vec4(p+add*FR, 1.0);
 }`;
 
 // Sun-bleached desert haze: sepia horizon breathing with the bass, wind-blown grit, heat shimmer on each hit.
@@ -170,7 +172,7 @@ void main(){
   vec2 c = (uv-0.5)*asp;
   vec2 shimmer = 0.003*vec2(sin(uv.y*40.+t*3.), 0.)*(0.5+mid);
   vec2 fc = c + shimmer + vec2(0.0025 + high*0.004, 0.);
-  vec3 p = texture(prev, fc/asp+0.5).rgb*0.92;
+  vec3 p = texture(prev, fc/asp+0.5).rgb*pow(0.92, FR);
   p = mix(p, vec3(dot(p,vec3(0.3,0.5,0.2)))*vec3(1.1,0.9,0.7), 0.05);
   vec3 sand = vec3(0.85,0.6,0.35), sky = vec3(0.35,0.2,0.25), sun = vec3(1.0,0.8,0.5);
   float horizon = -0.15;
@@ -185,7 +187,7 @@ void main(){
     float ring = abs(length(d) - ev[i].z*0.7);
     add += mix(sand, sun, ev[i].w) * exp(-ring*ring*900.) * (1.-ev[i].z) * 0.5;
   }
-  o = vec4(p+add,1.);
+  o = vec4(p+add*FR, 1.0);
 }`;
 
 // Freefall: the sky rushes upward, clouds streak past, canopies bloom on each hit and drift down.
@@ -194,7 +196,7 @@ void main(){
   vec2 asp = vec2(res.x/res.y,1.);
   vec2 c = (uv-0.5)*asp;
   vec2 fc = c*0.995 + vec2(0.002*sin(t*0.8+c.y*3.), 0.012 + bass*0.01);
-  vec3 p = texture(prev, fc/asp+0.5).rgb*0.93;
+  vec3 p = texture(prev, fc/asp+0.5).rgb*pow(0.93, FR);
   vec3 skyTop = vec3(0.1,0.25,0.6), skyBot = vec3(0.5,0.7,0.9);
   vec3 add = mix(skyBot, skyTop, uv.y) * 0.03;
   float cl = 0.;
@@ -212,7 +214,7 @@ void main(){
     float lines = step(abs(d.x*0.5 + (d.y+rad)*0.), 0.002) * step(-rad*2.5, d.y) * step(d.y, 0.);
     add += hsv(ev[i].w, 0.7, 1.0) * (canopy*(0.6+0.4*rib) + lines*0.4) * (1.-ev[i].z*ev[i].z) * 0.5;
   }
-  o = vec4(p+add,1.);
+  o = vec4(p+add*FR, 1.0);
 }`;
 
 // Starfield warp with a chunky neon LED spectrum across the middle. Gold, blue, magenta.
@@ -222,7 +224,7 @@ void main(){
   vec2 c = (uv-0.5)*asp;
   float zoom = 0.97 - bass*0.02;
   vec2 fc = c*zoom;
-  vec3 p = texture(prev, fc/asp+0.5).rgb*0.8;
+  vec3 p = texture(prev, fc/asp+0.5).rgb*pow(0.8, FR);
   vec3 gold = vec3(1.0,0.75,0.2), blue = vec3(0.2,0.5,1.0), mag = vec3(1.0,0.2,0.7);
   vec3 add = vec3(0);
   vec2 sq = floor(c*60. + 0.5);
@@ -246,7 +248,7 @@ void main(){
     add += mix(gold, mag, ev[i].w) * exp(-ring*ring*3000.) * (1.-ev[i].z) * 0.4;
   }
   add += gold * exp(-dot(c,c)*6.) * beat * 0.3;
-  o = vec4(p+add,1.);
+  o = vec4(p+add*FR, 1.0);
 }`;
 
 // Melting, sliced feedback with a slow spiral sigil and a lurking grin. Acid green and rust.
@@ -258,7 +260,7 @@ void main(){
   float slice = (hash(vec2(row, floor(t*6.)))-0.5) * step(0.85, hash(vec2(row, floor(t*6.)+7.))) * 0.08 * (0.3+high);
   vec2 warp = 0.01*vec2(sin(c.y*15.+t), cos(c.x*13.-t*1.3))*(0.3+mid);
   vec2 fc = c*0.992 + warp + vec2(slice, 0.);
-  vec3 p = texture(prev, fc/asp+0.5).rgb*0.92;
+  vec3 p = texture(prev, fc/asp+0.5).rgb*pow(0.92, FR);
   p = mix(p, p.gbr, 0.02);
   vec3 acid = vec3(0.6,1.0,0.2), rust = vec3(0.9,0.4,0.1);
   vec3 add = vec3(0);
@@ -277,7 +279,7 @@ void main(){
     float box = smoothstep(0.01,0.0,max(q.x,q.y)-0.05*(1.-ev[i].z));
     add += mix(acid, rust, ev[i].w) * box * (1.-ev[i].z) * 0.8;
   }
-  o = vec4(max(p+add,0.),1.);
+  o = vec4(max(p+add*FR, 0.), 1.);
 }`;
 
 // Black. Thin white lines meeting in an X. Nothing wasted; intersections glow briefly on each hit.
@@ -285,13 +287,13 @@ const XY = HEAD + `
 void main(){
   vec2 asp = vec2(res.x/res.y,1.);
   vec2 c = (uv-0.5)*asp;
-  vec3 p = texture(prev, uv).rgb*0.9;
+  vec3 p = texture(prev, ((uv-0.5)*(1.0-beat*0.06))+0.5).rgb*pow(0.85, FR);
   p = vec3(dot(p,vec3(0.333)));
   vec3 add = vec3(0);
-  float w = 0.0015 + bass*0.002;
+  float w = 0.0015 + bass*0.003 + beat*0.01;
   float d1 = abs(c.y - c.x), d2 = abs(c.y + c.x);
   float x = smoothstep(w+0.002, w, d1*0.707) + smoothstep(w+0.002, w, d2*0.707);
-  add += vec3(1.) * x * (0.12 + mid*0.2);
+  add += vec3(1.) * x * (0.12 + mid*0.2 + beat*0.8);
   for(int i=0;i<8;i++){
     if(ev[i].z<=0.0) continue;
     vec2 e = (ev[i].xy-0.5)*asp;
@@ -304,7 +306,10 @@ void main(){
     add += vec3(1.) * dot_ * 0.6;
   }
   add += vec3(1.) * exp(-dot(c,c)*400.) * beat * 0.5;
-  o = vec4(p+add,1.);
+  float br = abs(length(c) - (1.0-beat)*0.5);
+  add += vec3(1.) * smoothstep(0.012,0.0,br) * beat * beat * 1.5;
+  add += vec3(1.) * beat*beat*beat * 0.04;
+  o = vec4(p+add*FR, 1.0);
 }`;
 
 // Synthwave sunset: a striped sun over a scrolling neon grid, violet and orange, stars up top.
@@ -312,7 +317,7 @@ const EIGHTY = HEAD + `
 void main(){
   vec2 asp = vec2(res.x/res.y,1.);
   vec2 c = (uv-0.5)*asp;
-  vec3 p = texture(prev, uv).rgb*0.8;
+  vec3 p = texture(prev, uv).rgb*pow(0.8, FR);
   vec3 violet = vec3(0.6,0.2,1.0), orange = vec3(1.0,0.45,0.1), pink = vec3(1.0,0.2,0.6);
   vec3 add = vec3(0);
   float horizon = -0.05;
@@ -330,6 +335,20 @@ void main(){
     float line = smoothstep(0.03,0.0,gx*0.5/ (0.5+z*0.1)) + smoothstep(0.06,0.0,gz);
     add += violet * min(line,1.) * 0.25 * exp(-z*0.06) * (0.6+mid);
   }
+  // EQ: neon bars rising from the horizon, driven by bass/mid/high with per-column motion
+  float cols = 32.;
+  float ci = floor(uv.x*cols);
+  float band = ci/cols;
+  float lvl = band < 0.33 ? bass : band < 0.66 ? mid : high;
+  lvl = lvl*1.5 + 0.12*sin(ci*2.3 + t*4.) + beat*0.15;
+  float h = c.y - horizon;
+  float segs = floor(h*40.);
+  vec2 gq = fract(vec2(uv.x*cols, h*40.));
+  float padq = step(0.2,gq.x)*step(gq.x,0.8)*step(0.15,gq.y)*step(gq.y,0.85);
+  float lit = step(0., h) * step(segs, lvl*14.) * padq;
+  vec3 eqCol = mix(pink, orange, smoothstep(0.,0.35,h));
+  eqCol = mix(eqCol, violet, step(0.3, h));
+  add += eqCol * lit * 0.5;
   for(int i=0;i<8;i++){
     if(ev[i].z<=0.0) continue;
     vec2 e = (ev[i].xy-0.5)*asp;
@@ -337,7 +356,7 @@ void main(){
     float beam = smoothstep(0.015,0.0,abs(c.x-e.x)) * step(horizon, c.y) * step(c.y, horizon+0.5*(1.-ev[i].z));
     add += mix(orange, violet, ev[i].w) * beam * (1.-ev[i].z) * 0.8;
   }
-  o = vec4(p+add,1.);
+  o = vec4(p+add*FR, 1.0);
 }`;
 
 // Typographic collage energy: stark blocks flickering in black and white, red slamming in on the kick.
@@ -346,7 +365,7 @@ void main(){
   vec2 asp = vec2(res.x/res.y,1.);
   vec2 c = (uv-0.5)*asp;
   float jump = step(0.9, hash(vec2(floor(t*8.), 1.))) * (hash(vec2(floor(t*8.), 2.))-0.5)*0.1;
-  vec3 p = texture(prev, uv + vec2(jump, 0.)).rgb*0.82;
+  vec3 p = texture(prev, uv + vec2(jump, 0.)).rgb*pow(0.82, FR);
   p = vec3(dot(p, vec3(0.333)))*vec3(1.,0.95,0.9) * step(0.05, dot(p,vec3(0.333)));
   vec3 add = vec3(0);
   vec2 cell = floor(uv*vec2(12.,6.));
@@ -365,7 +384,7 @@ void main(){
   }
   vec2 rq = abs(c) - vec2(0.5, 0.08);
   add += vec3(1.,0.05,0.05) * step(max(rq.x,rq.y),0.) * beat * 1.5;
-  o = vec4(p+add,1.);
+  o = vec4(p+add*FR, 1.0);
 }`;
 
 // Hearts bursting on every hit, flames licking upward through the feedback. Pink, orange, gold.
@@ -376,7 +395,7 @@ void main(){
   vec2 c = (uv-0.5)*asp;
   float n = hash(floor(vec2(uv.x*res.x/4., uv.y*res.y/4. - t*60.)));
   vec2 fc = c + vec2((n-0.5)*0.006, 0.008 + bass*0.006);
-  vec3 p = texture(prev, fc/asp+0.5).rgb*0.9;
+  vec3 p = texture(prev, fc/asp+0.5).rgb*pow(0.9, FR);
   p = mix(p, p*vec3(1.05,0.9,0.7), 0.15);
   vec3 pink = vec3(1.0,0.3,0.6), orange = vec3(1.0,0.5,0.1), gold = vec3(1.0,0.9,0.4);
   vec3 add = vec3(0);
@@ -392,7 +411,7 @@ void main(){
   float flame = smoothstep(0.3,0.0,uv.y) * (0.5+0.5*sin(uv.x*30.+t*5.)) * hash(floor(vec2(uv.x*60., t*15.)));
   add += mix(orange, gold, uv.y*3.) * flame * (0.05+bass*0.3);
   add += gold * exp(-dot(c,c)*8.) * beat * 0.2;
-  o = vec4(p+add,1.);
+  o = vec4(p+add*FR, 1.0);
 }`;
 
 // Bitcrushed, torn, corrupted. Low-res feedback quantised to few colours, screen tears, harsh magenta/cyan.
@@ -405,8 +424,11 @@ void main(){
   vec2 c = (q-0.5)*asp;
   float band = floor(q.y*24.);
   float tear = step(0.8, hash(vec2(band, floor(t*12.)))) * (hash(vec2(band, floor(t*12.)+3.))-0.5) * 0.15 * (0.4+high);
-  vec3 p = texture(prev, q + vec2(tear, -0.004)).rgb*0.86;
-  p = floor(p*4.+0.5)/4.;
+  vec3 p = texture(prev, q + vec2(tear, -0.004)).rgb*pow(0.9, FR);
+  float lum = dot(p, vec3(0.333));
+  p *= 1. - 0.25*smoothstep(0.55, 1.0, lum)*FR; // bright areas burn off faster, so it never sits at white
+  // dithered 2-bit quantise: keeps the crunchy look without rounding locking pixels at a level
+  p = floor(p*4. + hash(floor(q*grid) + floor(t*60.)))/4.;
   vec3 mag = vec3(1.0,0.1,0.8), cyan = vec3(0.1,0.9,1.0), white = vec3(1.);
   vec3 add = vec3(0);
   float noise = hash(floor(q*grid) + floor(t*30.));
@@ -422,7 +444,7 @@ void main(){
   float scan = step(0.5, fract(q.y*px*0.5));
   add *= 0.7 + 0.3*scan;
   add += white * step(0.6, bass) * step(0.95, hash(vec2(floor(t*40.)))) * 0.3;
-  o = vec4(p+add,1.);
+  o = vec4(p+add*FR, 1.0);
 }`;
 
 // Arena-screen sacred geometry: a seven-fold breathing mandala, a slowly opening eye, indigo and gold.
@@ -434,7 +456,7 @@ void main(){
   float zoom = 0.992 - bass*0.015 + breath*0.004;
   float rot = 0.0015 + mid*0.006;
   mat2 R = mat2(cos(rot),-sin(rot),sin(rot),cos(rot));
-  vec3 p = texture(prev, (R*c*zoom)/asp+0.5).rgb*0.86;
+  vec3 p = texture(prev, (R*c*zoom)/asp+0.5).rgb*pow(0.86, FR);
   p *= vec3(1.0,0.86,0.94);
   vec3 indigo = vec3(0.35,0.2,0.95), gold = vec3(1.0,0.55,0.1), teal = vec3(0.85,0.08,0.15), cyan = vec3(0.55,0.85,1.0);
   float seg = 7.0;
@@ -472,7 +494,101 @@ void main(){
     add += mix(gold, teal, ev[i].w) * petal * (1.-ev[i].z) * 0.06;
   }
   add -= vec3(0.01)*r*r;
-  o = vec4(max(p+add,0.),1.);
+  o = vec4(max(p+add*FR, 0.), 1.);
+}`;
+
+// Faded 70s educational film: warm bleached oranges and teals, grain, tracking wobble, a slow sun, soft vignette.
+const BORED = HEAD + `
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  vec2 c = (uv-0.5)*asp;
+  float track = step(0.97, hash(vec2(floor(t*3.), 5.))) * 0.01*sin(uv.y*120.+t*40.);
+  vec2 fc = c*0.998 + vec2(track + 0.0008*sin(t*0.3+uv.y*4.), 0.0004);
+  vec3 p = texture(prev, fc/asp+0.5).rgb*pow(0.95, FR);
+  p = mix(p, vec3(dot(p,vec3(0.33)))*vec3(1.1,0.95,0.8), 0.04);
+  vec3 orange = vec3(0.95,0.55,0.25), teal = vec3(0.25,0.6,0.6), cream = vec3(0.95,0.85,0.65);
+  vec3 add = vec3(0);
+  vec2 sunP = vec2(0.25*sin(t*0.05), 0.08+0.05*cos(t*0.07));
+  float sr = length(c-sunP);
+  add += orange * smoothstep(0.14,0.13,sr) * 0.012 * (0.5+bass) + orange * exp(-sr*sr*20.)*0.004;
+  float hexAng = atan(c.y,c.x); float hexR = length(c)*cos(mod(hexAng+PI/6., PI/3.)-PI/6.);
+  float hex = smoothstep(0.012,0.0,abs(hexR-0.32-0.02*sin(t*0.4)));
+  add += teal * hex * 0.006 * (0.5+mid);
+  float grain = hash(floor(uv*res/2.)+floor(t*24.));
+  add += (grain-0.5)*0.05;
+  float scratch = step(0.998, hash(vec2(floor(uv.x*res.x/2.)+floor(t*10.)*7., 1.)));
+  add += cream * scratch * 0.15;
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    vec2 d = c - (ev[i].xy-0.5)*asp;
+    float blob = exp(-dot(d,d)*(60.+ev[i].z*200.));
+    add += mix(orange, teal, ev[i].w) * blob * (1.-ev[i].z) * 0.25;
+  }
+  add -= vec3(0.02)*dot(c,c);
+  o = vec4(max(p+add*FR, 0.), 1.);
+}`;
+
+// Tall vertical light columns, pale blue and white, drifting slowly. Strict, cold, monochrome.
+const TRICEP = HEAD + `
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  vec2 c = (uv-0.5)*asp;
+  vec3 p = texture(prev, uv).rgb*pow(0.9, FR);
+  p = mix(p, vec3(dot(p,vec3(0.33)))*vec3(0.85,0.92,1.), 0.1);
+  vec3 ice = vec3(0.75,0.85,1.0), white = vec3(1.);
+  vec3 add = vec3(0);
+  for(float k=0.; k<9.; k++){
+    float x = -0.7 + k*0.175 + 0.03*sin(t*0.2 + k*1.3);
+    float w = 0.004 + 0.008*(0.5+0.5*sin(t*0.5+k*2.1)) * (0.3+bass);
+    float col = smoothstep(w, 0.0, abs(c.x-x));
+    float bright = 0.4 + 0.6*(0.5+0.5*sin(t*0.3+k*0.7));
+    add += mix(ice, white, bright) * col * 0.03 * bright * (0.4+mid);
+  }
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    vec2 e = (ev[i].xy-0.5)*asp;
+    float col = smoothstep(0.012, 0.0, abs(c.x-e.x));
+    float span = smoothstep(0.6*(1.-ev[i].z), 0.0, abs(c.y-e.y));
+    add += white * col * span * (1.-ev[i].z) * 0.6;
+  }
+  add += ice * step(0.9, fract(uv.y*3. + t*0.2)) * 0.003;
+  add += white * beat * 0.04 * smoothstep(0.4,0.0,abs(c.y));
+  o = vec4(p+add*FR, 1.0);
+}`;
+
+// A glowing cross in gold and white, lens streaks, harsh strobe on the kick. Rock-disco in a dark hall.
+const JUSTICE = HEAD + `
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  vec2 c = (uv-0.5)*asp;
+  float zoom = 1.0 - beat*0.025;
+  vec3 p = texture(prev, (c*zoom)/asp+0.5).rgb*pow(0.78, FR);
+  p = mix(p, p*vec3(1.05,0.95,0.8), 0.1);
+  vec3 gold = vec3(1.0,0.75,0.3), white = vec3(1.0,0.95,0.85);
+  vec3 add = vec3(0);
+  float sz = 0.16 + bass*0.03;
+  vec2 q = abs(c);
+  float bar = 0.045;
+  float cross = step(max(q.x - bar, q.y - sz), 0.) + step(max(q.x - sz*0.8, q.y - bar), 0.);
+  cross = min(cross, 1.);
+  float glow = exp(-max(q.x-bar,0.)*12.) * step(q.y, sz+0.05) + exp(-max(q.y-bar,0.)*12.) * step(q.x, sz*0.8+0.05);
+  add += gold * cross * 0.08 * (0.6+bass) + gold * glow * exp(-length(c)*4.) * 0.006 * (0.3+bass);
+  float streak = exp(-abs(c.y)*80.) * exp(-abs(c.x)*1.5);
+  add += white * streak * (0.008 + beat*0.3);
+  float bevel = smoothstep(0.006,0.0,abs(max(q.x - bar, q.y - sz))) + smoothstep(0.006,0.0,abs(max(q.x - sz*0.8, q.y - bar)));
+  add += white * bevel * 0.15 * (0.5+bass);
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    vec2 e = (ev[i].xy-0.5)*asp;
+    float ang = atan(e.y, e.x);
+    vec2 dir = vec2(cos(ang), sin(ang));
+    float along = dot(c, dir), perp = abs(dot(c, vec2(-dir.y, dir.x)));
+    float beam = smoothstep(0.01,0.0,perp) * step(0., along) * step(along, 0.9*(1.-ev[i].z));
+    add += mix(gold, white, ev[i].w) * beam * (1.-ev[i].z) * 0.12;
+  }
+  add += white * beat*beat*beat*beat * 0.04;
+  add -= vec3(0.006); // drain haze toward black
+  o = vec4(p+add*FR, 1.0);
 }`;
 
 export const PRESETS: { name: string; fs: string }[] = [
@@ -491,6 +607,9 @@ export const PRESETS: { name: string; fs: string }[] = [
   { name: 'Hearts on Wire', fs: HEARTS },
   { name: 'Crystal Cackles', fs: CACKLES },
   { name: 'Pneumatic Spanner', fs: PNEUMA },
+  { name: 'Bored of Canada', fs: BORED },
+  { name: 'Tricep', fs: TRICEP },
+  { name: 'Just Ice', fs: JUSTICE },
 ];
 
 const BLIT = `#version 300 es
@@ -512,6 +631,9 @@ export class Viz {
   private float: boolean;
   bands = { bass: 0, mid: 0, high: 0 };
   private beat = 0;
+  private lastNow = -1;
+  /** When set, overrides measured frame time (used by tests to simulate 60fps). */
+  fixedDt: number | null = null;
 
   constructor(public canvas: HTMLCanvasElement, private analyser: AnalyserNode) {
     const gl = canvas.getContext('webgl2', { antialias: false, preserveDrawingBuffer: true });
@@ -575,7 +697,10 @@ export class Viz {
     this.analyser.getByteFrequencyData(this.fft);
     const avg = (a: number, b: number) => { let s = 0; for (let i = a; i < b; i++) s += this.fft[i]; return s / (b - a) / 255; };
     this.bands = { bass: avg(1, 8), mid: avg(8, 60), high: avg(60, 300) };
-    this.beat *= 0.9;
+    const dt = this.fixedDt ?? (this.lastNow < 0 ? 1 / 60 : Math.min(now - this.lastNow, 0.25));
+    this.lastNow = now;
+    const fr = Math.max(0.25, Math.min(dt * 60, 4));
+    this.beat *= Math.pow(0.9, fr);
 
     const next = 1 - this.cur;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo[next]);
@@ -587,7 +712,7 @@ export class Viz {
     gl.uniform1i(u('prev'), 0);
     gl.uniform1f(u('t'), now); gl.uniform2f(u('res'), this.w, this.h);
     gl.uniform1f(u('bass'), this.bands.bass); gl.uniform1f(u('mid'), this.bands.mid); gl.uniform1f(u('high'), this.bands.high);
-    gl.uniform1f(u('beat'), this.beat);
+    gl.uniform1f(u('beat'), this.beat); gl.uniform1f(u('dt'), dt);
     const evs = new Float32Array(32);
     this.events = this.events.filter((e) => now - e.t0 < 1.2);
     this.events.forEach((e, i) => { evs.set([e.x, e.y, (now - e.t0) / 1.2, e.hue], i * 4); });
