@@ -249,6 +249,182 @@ void main(){
   o = vec4(p+add,1.);
 }`;
 
+// Melting, sliced feedback with a slow spiral sigil and a lurking grin. Acid green and rust.
+const GRIN = HEAD + `
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  vec2 c = (uv-0.5)*asp;
+  float row = floor(uv.y*40.);
+  float slice = (hash(vec2(row, floor(t*6.)))-0.5) * step(0.85, hash(vec2(row, floor(t*6.)+7.))) * 0.08 * (0.3+high);
+  vec2 warp = 0.01*vec2(sin(c.y*15.+t), cos(c.x*13.-t*1.3))*(0.3+mid);
+  vec2 fc = c*0.992 + warp + vec2(slice, 0.);
+  vec3 p = texture(prev, fc/asp+0.5).rgb*0.92;
+  p = mix(p, p.gbr, 0.02);
+  vec3 acid = vec3(0.6,1.0,0.2), rust = vec3(0.9,0.4,0.1);
+  vec3 add = vec3(0);
+  float r = length(c), a = atan(c.y,c.x);
+  float spiral = fract(log(r+0.01)*3. - a/(2.*PI) - t*0.2);
+  add += acid * smoothstep(0.05,0.0,abs(spiral-0.5)) * exp(-r*1.5) * (0.05+bass*0.3);
+  vec2 m = c*vec2(1.,1.3);
+  float mouth = smoothstep(0.02,0.0,abs(m.y + 0.1 - 0.25*m.x*m.x + 0.12)) * step(abs(m.x),0.35);
+  vec2 el = abs(c) - vec2(0.18,-0.08);
+  float eyes = smoothstep(0.03,0.0,length(vec2(abs(c.x)-0.18, c.y-0.08))-0.03);
+  add += rust * (mouth+eyes) * max(bass-0.3,0.)*1.5;
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    vec2 d = c - (ev[i].xy-0.5)*asp;
+    vec2 q = abs(d);
+    float box = smoothstep(0.01,0.0,max(q.x,q.y)-0.05*(1.-ev[i].z));
+    add += mix(acid, rust, ev[i].w) * box * (1.-ev[i].z) * 0.8;
+  }
+  o = vec4(max(p+add,0.),1.);
+}`;
+
+// Black. Thin white lines meeting in an X. Nothing wasted; intersections glow briefly on each hit.
+const XY = HEAD + `
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  vec2 c = (uv-0.5)*asp;
+  vec3 p = texture(prev, uv).rgb*0.9;
+  p = vec3(dot(p,vec3(0.333)));
+  vec3 add = vec3(0);
+  float w = 0.0015 + bass*0.002;
+  float d1 = abs(c.y - c.x), d2 = abs(c.y + c.x);
+  float x = smoothstep(w+0.002, w, d1*0.707) + smoothstep(w+0.002, w, d2*0.707);
+  add += vec3(1.) * x * (0.12 + mid*0.2);
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    vec2 e = (ev[i].xy-0.5)*asp;
+    float along = dot(c, normalize(vec2(1., mod(float(i),2.)<1. ? 1. : -1.)));
+    float target = dot(e, normalize(vec2(1., mod(float(i),2.)<1. ? 1. : -1.)));
+    float onLine = mod(float(i),2.)<1. ? d1*0.707 : d2*0.707;
+    float g = exp(-pow((along-target)*8.,2.)) * smoothstep(0.02,0.0,onLine);
+    add += vec3(1.) * g * (1.-ev[i].z) * 1.2;
+    float dot_ = exp(-dot(c-e,c-e)*3000.)*(1.-ev[i].z);
+    add += vec3(1.) * dot_ * 0.6;
+  }
+  add += vec3(1.) * exp(-dot(c,c)*400.) * beat * 0.5;
+  o = vec4(p+add,1.);
+}`;
+
+// Synthwave sunset: a striped sun over a scrolling neon grid, violet and orange, stars up top.
+const EIGHTY = HEAD + `
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  vec2 c = (uv-0.5)*asp;
+  vec3 p = texture(prev, uv).rgb*0.8;
+  vec3 violet = vec3(0.6,0.2,1.0), orange = vec3(1.0,0.45,0.1), pink = vec3(1.0,0.2,0.6);
+  vec3 add = vec3(0);
+  float horizon = -0.05;
+  if(c.y > horizon){
+    float sr = length(vec2(c.x, (c.y-horizon-0.18)*1.));
+    float sun = smoothstep(0.22,0.21,sr);
+    float stripes = step(0.5, fract((c.y-horizon)*30. - t*0.5)) * step(c.y-horizon, 0.18);
+    add += mix(orange, pink, (c.y-horizon)/0.4) * sun * (1.-stripes*0.8) * 0.25 * (0.7+bass*0.5);
+    vec2 sq = floor(c*80.);
+    add += vec3(0.8,0.7,1.) * step(0.995, hash(sq)) * (0.5+0.5*sin(t*3.+hash(sq+1.)*10.)) * 0.3;
+    add += mix(vec3(0.15,0.02,0.2), vec3(0.), (c.y-horizon)*2.) * 0.05;
+  } else {
+    float z = 0.12/(horizon-c.y+0.001);
+    float gx = abs(fract(c.x*z*1.5+0.5)-0.5), gz = abs(fract(z + t*2.5 + bass*2.)-0.5);
+    float line = smoothstep(0.03,0.0,gx*0.5/ (0.5+z*0.1)) + smoothstep(0.06,0.0,gz);
+    add += violet * min(line,1.) * 0.25 * exp(-z*0.06) * (0.6+mid);
+  }
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    vec2 e = (ev[i].xy-0.5)*asp;
+    float d = abs(c.y - horizon - 0.02) ;
+    float beam = smoothstep(0.015,0.0,abs(c.x-e.x)) * step(horizon, c.y) * step(c.y, horizon+0.5*(1.-ev[i].z));
+    add += mix(orange, violet, ev[i].w) * beam * (1.-ev[i].z) * 0.8;
+  }
+  o = vec4(p+add,1.);
+}`;
+
+// Typographic collage energy: stark blocks flickering in black and white, red slamming in on the kick.
+const OVERWORLD = HEAD + `
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  vec2 c = (uv-0.5)*asp;
+  float jump = step(0.9, hash(vec2(floor(t*8.), 1.))) * (hash(vec2(floor(t*8.), 2.))-0.5)*0.1;
+  vec3 p = texture(prev, uv + vec2(jump, 0.)).rgb*0.82;
+  p = vec3(dot(p, vec3(0.333)))*vec3(1.,0.95,0.9) * step(0.05, dot(p,vec3(0.333)));
+  vec3 add = vec3(0);
+  vec2 cell = floor(uv*vec2(12.,6.));
+  float on = step(0.93 - mid*0.15, hash(cell + floor(t*10.)));
+  vec2 g = fract(uv*vec2(12.,6.));
+  float pad = step(0.08,g.x)*step(g.x,0.92)*step(0.1,g.y)*step(g.y,0.9);
+  add += vec3(1.) * on * pad * 0.5;
+  float bar = step(0.985 - high*0.02, hash(vec2(floor(uv.y*60.), floor(t*20.))));
+  add += vec3(1.) * bar * 0.4;
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    vec2 e = (ev[i].xy-0.5)*asp;
+    vec2 q = abs(c-e) - vec2(0.25*(1.-ev[i].z), 0.03);
+    float rect = step(max(q.x,q.y), 0.);
+    add += vec3(1.) * rect * (1.-ev[i].z) * 0.7;
+  }
+  vec2 rq = abs(c) - vec2(0.5, 0.08);
+  add += vec3(1.,0.05,0.05) * step(max(rq.x,rq.y),0.) * beat * 1.5;
+  o = vec4(p+add,1.);
+}`;
+
+// Hearts bursting on every hit, flames licking upward through the feedback. Pink, orange, gold.
+const HEARTS = HEAD + `
+float heart(vec2 q){ q.y -= 0.03; float a = atan(q.x,q.y)/PI; float r = length(q); float h = abs(a); float d = (13.0*h - 22.0*h*h + 10.0*h*h*h)/(6.0-5.0*h); return r - d*0.1; }
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  vec2 c = (uv-0.5)*asp;
+  float n = hash(floor(vec2(uv.x*res.x/4., uv.y*res.y/4. - t*60.)));
+  vec2 fc = c + vec2((n-0.5)*0.006, 0.008 + bass*0.006);
+  vec3 p = texture(prev, fc/asp+0.5).rgb*0.9;
+  p = mix(p, p*vec3(1.05,0.9,0.7), 0.15);
+  vec3 pink = vec3(1.0,0.3,0.6), orange = vec3(1.0,0.5,0.1), gold = vec3(1.0,0.9,0.4);
+  vec3 add = vec3(0);
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    vec2 e = (ev[i].xy-0.5)*asp;
+    float sc = 0.6 + ev[i].z*2.5;
+    float d = heart((c-e)*sc/ (0.6));
+    float fill = smoothstep(0.02,0.0,d) ;
+    float edge = smoothstep(0.03,0.0,abs(d));
+    add += mix(pink, orange, ev[i].w) * (fill*0.5 + edge*0.8) * (1.-ev[i].z) * 0.9;
+  }
+  float flame = smoothstep(0.3,0.0,uv.y) * (0.5+0.5*sin(uv.x*30.+t*5.)) * hash(floor(vec2(uv.x*60., t*15.)));
+  add += mix(orange, gold, uv.y*3.) * flame * (0.05+bass*0.3);
+  add += gold * exp(-dot(c,c)*8.) * beat * 0.2;
+  o = vec4(p+add,1.);
+}`;
+
+// Bitcrushed, torn, corrupted. Low-res feedback quantised to few colours, screen tears, harsh magenta/cyan.
+const CACKLES = HEAD + `
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  float px = 120.;
+  vec2 grid = vec2(px*res.x/res.y, px);
+  vec2 q = (floor(uv*grid)+0.5)/grid;
+  vec2 c = (q-0.5)*asp;
+  float band = floor(q.y*24.);
+  float tear = step(0.8, hash(vec2(band, floor(t*12.)))) * (hash(vec2(band, floor(t*12.)+3.))-0.5) * 0.15 * (0.4+high);
+  vec3 p = texture(prev, q + vec2(tear, -0.004)).rgb*0.86;
+  p = floor(p*4.+0.5)/4.;
+  vec3 mag = vec3(1.0,0.1,0.8), cyan = vec3(0.1,0.9,1.0), white = vec3(1.);
+  vec3 add = vec3(0);
+  float noise = hash(floor(q*grid) + floor(t*30.));
+  add += mix(mag, cyan, step(0.5, hash(floor(q*grid)+1.))) * step(0.965 - mid*0.05, noise) * 0.45;
+  add += white * step(0.998, noise) * 0.8;
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    vec2 e = (ev[i].xy-0.5)*asp;
+    vec2 d = abs(c-e);
+    float box = step(max(d.x,d.y), 0.12*(1.-ev[i].z)+0.02) * step(0.08*(1.-ev[i].z), max(d.x,d.y));
+    add += mix(mag, cyan, ev[i].w) * box * (1.-ev[i].z) * 1.2;
+  }
+  float scan = step(0.5, fract(q.y*px*0.5));
+  add *= 0.7 + 0.3*scan;
+  add += white * step(0.6, bass) * step(0.95, hash(vec2(floor(t*40.)))) * 0.3;
+  o = vec4(p+add,1.);
+}`;
+
 export const PRESETS: { name: string; fs: string }[] = [
   { name: 'Kaleidoscope', fs: KALEIDO },
   { name: 'Kid Amoeba', fs: AMOEBA },
@@ -258,6 +434,12 @@ export const PRESETS: { name: string; fs: string }[] = [
   { name: 'Kerala Dusk', fs: DUSK },
   { name: 'The Parachute Pending', fs: PARACHUTE },
   { name: 'Interstella 5556', fs: STELLA },
+  { name: 'Aphex Grin', fs: GRIN },
+  { name: 'The XY', fs: XY },
+  { name: 'French 80', fs: EIGHTY },
+  { name: 'Overworld', fs: OVERWORLD },
+  { name: 'Hearts on Wire', fs: HEARTS },
+  { name: 'Crystal Cackles', fs: CACKLES },
 ];
 
 const BLIT = `#version 300 es
