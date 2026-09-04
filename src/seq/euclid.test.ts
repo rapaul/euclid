@@ -1,3 +1,4 @@
+import { Track } from './track';
 import { describe, expect, it } from 'vitest';
 import { euclid } from './euclid';
 import { degreeToMidi, midiToFreq } from './scale';
@@ -37,6 +38,35 @@ describe('scale', () => {
     expect(degreeToMidi(-1, pent, 48)).toBe(46);
   });
   it('A4 = 440', () => expect(midiToFreq(69)).toBe(440));
+});
+
+describe('track phrase', () => {
+  const mk = (walkSeed: number) => new Track({ name: 'b', color: '', voice: 'bass', steps: 16, hits: 16, rotate: 0, probability: 1, walkMin: -2, walkMax: 4, walkSeed }, 1);
+  it('loops the same notes each cycle', () => {
+    const t = mk(3);
+    const a = Array.from({ length: 16 }, (_, i) => t.tick(i, 0)!.midi);
+    const b = Array.from({ length: 16 }, (_, i) => t.tick(i + 16, 0)!.midi);
+    expect(a).toEqual(b);
+  });
+  it('changes with the seed and restores via update', () => {
+    const t = mk(3);
+    const a = [...t.phrase];
+    t.reseedWalk(99);
+    expect(t.phrase).not.toEqual(a);
+    t.update({ walkSeed: 3 });
+    expect(t.phrase).toEqual(a);
+  });
+});
+
+describe('random walk mode', () => {
+  it('toggling back restores the looping phrase', () => {
+    const t = new Track({ name: 'b', color: '', voice: 'bass', steps: 16, hits: 16, rotate: 0, probability: 1, walkMin: -2, walkMax: 4, walkSeed: 3 }, 1);
+    const loop = Array.from({ length: 16 }, (_, i) => t.tick(i, 0)!.midi);
+    t.update({ randomWalk: true });
+    for (let i = 0; i < 64; i++) t.tick(i, 0);
+    t.update({ randomWalk: false });
+    expect(Array.from({ length: 16 }, (_, i) => t.tick(i, 0)!.midi)).toEqual(loop);
+  });
 });
 
 describe('random', () => {

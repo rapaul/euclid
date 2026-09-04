@@ -41,6 +41,11 @@ export function buildUI(root: HTMLElement, engine: Engine) {
 
   const seed = btn('reseed', '⟳ Seed', 'Randomise all patterns (R)');
   seed.onclick = () => { engine.tracks.forEach((t) => t.update({ rotate: Math.floor(Math.random() * t.params.steps), hits: 1 + Math.floor(Math.random() * t.params.steps * 0.6) })); render(); commit(); };
+  const bassline = btn('bassline', '♪ New Baseline', 'Generate a new bassline (B)');
+  bassline.onclick = () => { engine.tracks.forEach((t) => t.reseedWalk()); commit(); };
+  const randomBass = btn('random-bass', '~ Random Baseline', 'Toggle live random-walk bassline (N)');
+  const pitched = () => engine.tracks.filter((t) => t.phrase.length);
+  randomBass.onclick = () => { const on = !pitched()[0]?.params.randomWalk; pitched().forEach((t) => t.update({ randomWalk: on })); render(); commit(); };
   const undo = btn('undo', '↶ Undo', 'Undo (Ctrl+Z)');
   undo.onclick = () => apply(history.undo());
   const redo = btn('redo', '↷ Redo', 'Redo (Ctrl+Shift+Z)');
@@ -50,7 +55,7 @@ export function buildUI(root: HTMLElement, engine: Engine) {
 
   transport.append(
     play, group(bpm, label('bpm', tap)), group(label('swing', swing), label('vol', vol), label('reverb', rev)),
-    sep(), seed, undo, redo, reset,
+    sep(), seed, bassline, randomBass, undo, redo, reset,
   );
 
   // ── tracks ────────────────────────────────────────────────────────────────
@@ -86,6 +91,7 @@ export function buildUI(root: HTMLElement, engine: Engine) {
       engine.trackGain(rows.indexOf(rows.find((r) => r.t === t)!));
       inputs.hits.max = String(t.params.steps);
     });
+    randomBass.setAttribute('aria-pressed', String(!!pitched()[0]?.params.randomWalk));
   }
   function syncTransport() {
     play.setAttribute('aria-pressed', String(engine.running));
@@ -103,6 +109,8 @@ export function buildUI(root: HTMLElement, engine: Engine) {
     else if (e.key.toLowerCase() === 'y' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); redo.click(); }
     else if (e.key.toLowerCase() === 't') tap.click();
     else if (e.key.toLowerCase() === 'r') seed.click();
+    else if (e.key.toLowerCase() === 'b') bassline.click();
+    else if (e.key.toLowerCase() === 'n') randomBass.click();
   });
 
   /** Cheap per-frame update: only toggles the `cur` class. */
