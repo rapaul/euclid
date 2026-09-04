@@ -107,7 +107,7 @@ export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
   // ── shortcut help ─────────────────────────────────────────────────────────
   const SHORTCUTS: [string, string][] = [
     ['Space', 'Play / Stop'], ['R', 'Reseed all patterns'],
-    ['N', 'New baseline'], ['B', 'Toggle random baseline'], ['V', 'Next visualisation'],
+    ['N', 'New baseline'], ['B', 'Toggle random baseline'], ['V', 'Next visualisation'], ['F', 'Hide / show controls'],
     ['Ctrl+Z', 'Undo'], ['Ctrl+Shift+Z / Ctrl+Y', 'Redo'], ['?', 'Show / hide this help'], ['Esc', 'Close this help'],
   ];
   const help = el('div', 'help'); help.hidden = true; help.setAttribute('role', 'dialog'); help.setAttribute('aria-label', 'Keyboard shortcuts');
@@ -124,10 +124,15 @@ export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
   // ── auto-hide after inactivity ───────────────────────────────────────────
   const IDLE_MS = 30_000;
   let idleTimer = 0;
+  const setHidden = (hidden: boolean) => { root.classList.toggle('idle', hidden); document.body.classList.toggle('idle', hidden); };
   const wake = () => {
-    root.classList.remove('idle'); document.body.classList.remove('idle');
+    setHidden(false);
     clearTimeout(idleTimer);
-    idleTimer = window.setTimeout(() => { if (help.hidden) { root.classList.add('idle'); document.body.classList.add('idle'); } }, IDLE_MS);
+    idleTimer = window.setTimeout(() => { if (help.hidden) setHidden(true); }, IDLE_MS);
+  };
+  const toggleHidden = () => {
+    if (root.classList.contains('idle')) wake();
+    else { clearTimeout(idleTimer); help.hidden = true; setHidden(true); }
   };
   // Keys are handled in the shortcut listener so V can cycle visuals without waking the UI.
   for (const evName of ['pointermove', 'pointerdown', 'wheel', 'touchstart'] as const) {
@@ -137,7 +142,9 @@ export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
 
   // ── keyboard ──────────────────────────────────────────────────────────────
   window.addEventListener('keydown', (e) => {
-    if (e.key.toLowerCase() === 'v' && !e.ctrlKey && !e.metaKey && (e.target as HTMLElement).tagName !== 'INPUT') { vizBtn.click(); return; }
+    const plain = !e.ctrlKey && !e.metaKey && (e.target as HTMLElement).tagName !== 'INPUT';
+    if (e.key.toLowerCase() === 'v' && plain) { vizBtn.click(); return; }
+    if (e.key.toLowerCase() === 'f' && plain) { toggleHidden(); return; }
     wake();
     if (e.key === '?') { e.preventDefault(); helpBtn.click(); return; }
     if (e.key === 'Escape' && !help.hidden) { help.hidden = true; return; }
