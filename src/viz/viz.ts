@@ -425,6 +425,54 @@ void main(){
   o = vec4(p+add,1.);
 }`;
 
+// Arena-screen sacred geometry: a seven-fold breathing mandala, a slowly opening eye, indigo and gold.
+const PNEUMA = HEAD + `
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  vec2 c = (uv-0.5)*asp;
+  float breath = 0.5+0.5*sin(t*0.6);
+  float zoom = 0.992 - bass*0.015 + breath*0.004;
+  float rot = 0.0015 + mid*0.006;
+  mat2 R = mat2(cos(rot),-sin(rot),sin(rot),cos(rot));
+  vec3 p = texture(prev, (R*c*zoom)/asp+0.5).rgb*0.86;
+  p = mix(p, p*vec3(0.9,0.95,1.1), 0.05);
+  vec3 indigo = vec3(0.2,0.15,0.7), gold = vec3(1.0,0.8,0.35), teal = vec3(0.1,0.7,0.7);
+  float seg = 7.0;
+  float r = length(c), a = atan(c.y,c.x) + t*0.05;
+  float ka = mod(a, 2.*PI/seg); ka = abs(ka - PI/seg);
+  vec2 k = vec2(cos(ka),sin(ka))*r;
+  vec3 add = vec3(0);
+  // kali-style fold for fractal filigree
+  vec2 z = k*3.;
+  float fil = 0.;
+  for(int i=0;i<5;i++){ z = abs(z)/dot(z,z) - vec2(0.9+breath*0.1, 0.6); fil += smoothstep(0.03,0.0,abs(z.x)) + smoothstep(0.03,0.0,abs(z.y)); }
+  add += mix(indigo, teal, r*1.5) * min(fil,2.) * 0.01 * (0.5+mid) * smoothstep(0.05,0.2,r);
+  // concentric rings that breathe
+  float ring = abs(fract(r*6. - breath*0.5) - 0.5);
+  add += gold * smoothstep(0.05,0.0,ring) * 0.008 * smoothstep(0.7,0.2,r);
+  // radial spokes
+  float spoke = smoothstep(0.015,0.0,abs(ka - PI/seg*0.5)*r);
+  add += indigo * spoke * 0.02;
+  // the eye: almond shape, lid opens with bass
+  float open = 0.05 + max(bass-0.2,0.)*0.5 + beat*0.1;
+  float lid = abs(c.y) - open*(1. - c.x*c.x*12.);
+  float eye = smoothstep(0.005,0.0,lid) * step(abs(c.x), 0.29);
+  float iris = smoothstep(0.08,0.07,r) * eye;
+  float pupil = smoothstep(0.035,0.03,r) * eye;
+  add += gold * eye * 0.01 + mix(gold, teal, smoothstep(0.03,0.08,r)) * iris * (1.-pupil) * 0.12 * (0.5+bass);
+  add += gold * smoothstep(0.006,0.0,abs(lid)) * step(abs(c.x),0.29) * 0.15;
+  // events: petals blooming outward on the fold
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    float pr = 0.12 + ev[i].z*0.55;
+    vec2 d = k - vec2(cos(PI/seg*0.5), sin(PI/seg*0.5))*pr;
+    float petal = exp(-dot(d,d)*1500.) ;
+    add += mix(gold, teal, ev[i].w) * petal * (1.-ev[i].z) * 0.08;
+  }
+  add -= vec3(0.01)*r*r;
+  o = vec4(max(p+add,0.),1.);
+}`;
+
 export const PRESETS: { name: string; fs: string }[] = [
   { name: 'Kaleidoscope', fs: KALEIDO },
   { name: 'Kid Amoeba', fs: AMOEBA },
@@ -440,6 +488,7 @@ export const PRESETS: { name: string; fs: string }[] = [
   { name: 'Overworld', fs: OVERWORLD },
   { name: 'Hearts on Wire', fs: HEARTS },
   { name: 'Crystal Cackles', fs: CACKLES },
+  { name: 'Pneumatic Spanner', fs: PNEUMA },
 ];
 
 const BLIT = `#version 300 es
