@@ -1,7 +1,8 @@
 import type { Engine, Snapshot } from '../audio/engine';
 import { History } from '../seq/history';
+import type { Viz } from '../viz/viz';
 
-export function buildUI(root: HTMLElement, engine: Engine) {
+export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
   root.innerHTML = '';
   const initial = engine.snapshot();
   const history = new History<Snapshot>(structuredClone(initial));
@@ -53,9 +54,14 @@ export function buildUI(root: HTMLElement, engine: Engine) {
   const reset = btn('reset', '⟲ Reset', 'Revert to defaults');
   reset.onclick = () => { engine.restore(structuredClone(initial)); render(); commit(); };
 
+  const vizBtn = btn('viz-preset', viz?.presetName ?? '', 'Next visualisation (V)');
+  vizBtn.className = 'viz-name';
+  vizBtn.onclick = () => { if (!viz) return; viz.nextPreset(); vizBtn.textContent = viz.presetName; };
+  if (!viz) vizBtn.hidden = true;
+
   transport.append(
     play, group(bpm, label('bpm', tap)), group(label('swing', swing), label('vol', vol), label('reverb', rev)),
-    sep(), seed, bassline, randomBass, undo, redo, reset,
+    sep(), seed, bassline, randomBass, undo, redo, reset, vizBtn,
   );
 
   // ── tracks ────────────────────────────────────────────────────────────────
@@ -120,10 +126,12 @@ export function buildUI(root: HTMLElement, engine: Engine) {
     else if (e.key.toLowerCase() === 'r') seed.click();
     else if (e.key.toLowerCase() === 'b') bassline.click();
     else if (e.key.toLowerCase() === 'n') randomBass.click();
+    else if (e.key.toLowerCase() === 'v') vizBtn.click();
   });
 
   /** Cheap per-frame update: only toggles the `cur` class. */
   function frame() {
+    if (viz && vizBtn.textContent !== viz.presetName) vizBtn.textContent = viz.presetName;
     rows.forEach(({ steps, t }) => {
       const cur = engine.currentStep < 0 ? -1 : engine.currentStep % t.params.steps;
       const kids = steps.children;

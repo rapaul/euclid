@@ -13,7 +13,7 @@ engine.tracks = [
 
 const canvas = document.getElementById('viz') as HTMLCanvasElement;
 const viz = new Viz(canvas, engine.analyser);
-const ui = buildUI(document.getElementById("ui")!, engine);
+const ui = buildUI(document.getElementById("ui")!, engine, viz);
 
 function loop() {
   const now = performance.now() / 1000;
