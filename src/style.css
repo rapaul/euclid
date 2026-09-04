@@ -33,3 +33,12 @@ button:disabled { opacity: .35; cursor: default; }
 button:disabled:hover { border-color: #2c2c4a; }
 .track.head { background: none; border: none; padding: 0 8px; color: var(--dim); font-size: 10px; }
 .track.head .params span { width: 70px; text-align: center; }
+
+#help-btn { padding: 3px 8px; color: var(--dim); }
+.help { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 10; }
+.help-box { background: #0e0e1a; border: 1px solid #2c2c4a; border-radius: 10px; padding: 16px 22px; min-width: 300px; }
+.help-box h2 { margin: 0 0 10px; font-size: 14px; color: var(--acc); }
+.help-box dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0; }
+.help-box dt { color: var(--fg); background: #16162a; border: 1px solid #2c2c4a; border-radius: 4px; padding: 1px 6px; text-align: center; white-space: nowrap; }
+.help-box dd { margin: 0; color: var(--dim); align-self: center; }
+.help-hint { margin: 12px 0 0; color: var(--dim); font-size: 11px; text-align: center; }

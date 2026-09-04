@@ -42,9 +42,9 @@ export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
 
   const seed = btn('reseed', '⟳ Seed', 'Randomise all patterns (R)');
   seed.onclick = () => { engine.tracks.forEach((t) => t.update({ rotate: Math.floor(Math.random() * t.params.steps), hits: 1 + Math.floor(Math.random() * t.params.steps * 0.6) })); render(); commit(); };
-  const bassline = btn('bassline', '♪ New Baseline', 'Generate a new bassline (B)');
+  const bassline = btn('bassline', '♪ New Baseline', 'Generate a new bassline (N)');
   bassline.onclick = () => { engine.tracks.forEach((t) => t.reseedWalk()); commit(); };
-  const randomBass = btn('random-bass', '~ Random Baseline', 'Toggle live random-walk bassline (N)');
+  const randomBass = btn('random-bass', '~ Random Baseline', 'Toggle live random-walk bassline (B)');
   const pitched = () => engine.tracks.filter((t) => t.phrase.length);
   randomBass.onclick = () => { const on = !pitched()[0]?.params.randomWalk; pitched().forEach((t) => t.update({ randomWalk: on })); render(); commit(); };
   const undo = btn('undo', '↶ Undo', 'Undo (Ctrl+Z)');
@@ -116,16 +116,35 @@ export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
   }
   render(); syncTransport();
 
+  // ── shortcut help ─────────────────────────────────────────────────────────
+  const SHORTCUTS: [string, string][] = [
+    ['Space', 'Play / Stop'], ['T', 'Tap tempo'], ['R', 'Reseed all patterns'],
+    ['N', 'New baseline'], ['B', 'Toggle random baseline'], ['V', 'Next visualisation'],
+    ['Ctrl+Z', 'Undo'], ['Ctrl+Shift+Z / Ctrl+Y', 'Redo'], ['?', 'Show / hide this help'], ['Esc', 'Close this help'],
+  ];
+  const help = el('div', 'help'); help.hidden = true; help.setAttribute('role', 'dialog'); help.setAttribute('aria-label', 'Keyboard shortcuts');
+  const helpBox = el('div', 'help-box'); helpBox.append(el('h2', '', 'Keyboard shortcuts'));
+  const dl = el('dl');
+  for (const [k, d] of SHORTCUTS) { dl.append(el('dt', '', k), el('dd', '', d)); }
+  helpBox.append(dl, el('p', 'help-hint', 'Press ? or Esc to close')); help.append(helpBox);
+  help.onclick = (e) => { if (e.target === help) help.hidden = true; };
+  document.body.append(help);
+  const helpBtn = btn('help-btn', '?', 'Keyboard shortcuts (?)');
+  helpBtn.onclick = () => { help.hidden = !help.hidden; };
+  transport.append(helpBtn);
+
   // ── keyboard ──────────────────────────────────────────────────────────────
   window.addEventListener('keydown', (e) => {
+    if (e.key === '?') { e.preventDefault(); helpBtn.click(); return; }
+    if (e.key === 'Escape' && !help.hidden) { help.hidden = true; return; }
     if ((e.target as HTMLElement).tagName === 'INPUT' && e.key !== 'Escape') return;
     if (e.code === 'Space') { e.preventDefault(); play.click(); }
     else if (e.key.toLowerCase() === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); (e.shiftKey ? redo : undo).click(); }
     else if (e.key.toLowerCase() === 'y' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); redo.click(); }
     else if (e.key.toLowerCase() === 't') tap.click();
     else if (e.key.toLowerCase() === 'r') seed.click();
-    else if (e.key.toLowerCase() === 'b') bassline.click();
-    else if (e.key.toLowerCase() === 'n') randomBass.click();
+    else if (e.key.toLowerCase() === 'n') bassline.click();
+    else if (e.key.toLowerCase() === 'b') randomBass.click();
     else if (e.key.toLowerCase() === 'v') vizBtn.click();
   });
 
