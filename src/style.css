@@ -1,0 +1,30 @@
+:root { color-scheme: dark; --bg: #07070c; --fg: #e8e6ff; --dim: #6b6a85; --acc: #ff4fd8; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; display: flex; flex-direction: column; background: var(--bg); color: var(--fg); font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; overflow: hidden; }
+#viz { display: block; width: 100vw; flex: 1 1 auto; min-height: 0; }
+#ui { flex: 0 0 auto; max-height: 50vh; overflow: auto; padding: 6px 12px 8px; display: grid; grid-template-rows: auto auto; gap: 6px; }
+.transport { display: flex; gap: 12px; align-items: center; }
+button { background: #16162a; color: var(--fg); border: 1px solid #2c2c4a; padding: 3px 10px; border-radius: 6px; cursor: pointer; font: inherit; }
+button:hover { border-color: var(--acc); }
+button[aria-pressed="true"] { background: var(--acc); color: #000; border-color: var(--acc); }
+.tracks { display: grid; gap: 4px; align-content: start; }
+.track { display: grid; grid-template-columns: 90px 1fr auto; gap: 10px; align-items: center; padding: 4px 8px; background: #0e0e1a; border: 1px solid #1c1c30; border-radius: 8px; }
+.track .name { font-weight: 600; }
+.steps { display: grid; gap: 3px; grid-auto-flow: column; grid-auto-columns: 1fr; }
+.step { aspect-ratio: 1; max-height: 18px; border-radius: 3px; background: #1a1a2e; min-width: 10px; }
+.step.hit { background: var(--track, var(--acc)); opacity: .55; }
+.step.cur { outline: 2px solid #fff; }
+.step.hit.cur { opacity: 1; }
+.params { display: flex; gap: 10px; align-items: center; color: var(--dim); }
+.track:not(.head) .params { padding-bottom: 0; }
+.params label { display: flex; flex-direction: column; align-items: center; font-size: 10px; gap: 0; line-height: 1; }
+input[type=range] { width: 70px; height: 14px; margin: 0; accent-color: var(--acc); }
+input[type=number] { width: 56px; background: #16162a; color: var(--fg); border: 1px solid #2c2c4a; border-radius: 4px; padding: 3px; font: inherit; }
+.transport { flex-wrap: wrap; gap: 8px; }
+.transport .group { display: flex; gap: 8px; align-items: center; }
+.transport label { display: flex; flex-direction: column; align-items: center; font-size: 10px; line-height: 1; color: var(--dim); gap: 1px; }
+.transport .sep { width: 1px; height: 20px; background: #2c2c4a; margin: 0 4px; }
+button:disabled { opacity: .35; cursor: default; }
+button:disabled:hover { border-color: #2c2c4a; }
+.track.head { background: none; border: none; padding: 0 8px; color: var(--dim); font-size: 10px; }
+.track.head .params span { width: 70px; text-align: center; }
