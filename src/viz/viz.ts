@@ -163,12 +163,101 @@ void main(){
   o = vec4(p+add,1.);
 }`;
 
+// Sun-bleached desert haze: sepia horizon breathing with the bass, wind-blown grit, heat shimmer on each hit.
+const DUSK = HEAD + `
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  vec2 c = (uv-0.5)*asp;
+  vec2 shimmer = 0.003*vec2(sin(uv.y*40.+t*3.), 0.)*(0.5+mid);
+  vec2 fc = c + shimmer + vec2(0.0025 + high*0.004, 0.);
+  vec3 p = texture(prev, fc/asp+0.5).rgb*0.92;
+  p = mix(p, vec3(dot(p,vec3(0.3,0.5,0.2)))*vec3(1.1,0.9,0.7), 0.05);
+  vec3 sand = vec3(0.85,0.6,0.35), sky = vec3(0.35,0.2,0.25), sun = vec3(1.0,0.8,0.5);
+  float horizon = -0.15;
+  float sunG = exp(-pow((c.y-horizon)*4.,2.)) * exp(-c.x*c.x*1.5);
+  vec3 add = sun * sunG * (0.03 + bass*0.08);
+  add += mix(sand, sky, smoothstep(horizon-0.1, horizon+0.4, c.y)) * 0.006;
+  float g = hash(floor(vec2(uv.x*res.x/3. - t*90., uv.y*res.y/3.)) + floor(t*20.));
+  add += sand * step(0.985 - high*0.02, g) * 0.35;
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    vec2 d = c - (ev[i].xy-0.5)*asp; d.y *= 4.;
+    float ring = abs(length(d) - ev[i].z*0.7);
+    add += mix(sand, sun, ev[i].w) * exp(-ring*ring*900.) * (1.-ev[i].z) * 0.5;
+  }
+  o = vec4(p+add,1.);
+}`;
+
+// Freefall: the sky rushes upward, clouds streak past, canopies bloom on each hit and drift down.
+const PARACHUTE = HEAD + `
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  vec2 c = (uv-0.5)*asp;
+  vec2 fc = c*0.995 + vec2(0.002*sin(t*0.8+c.y*3.), 0.012 + bass*0.01);
+  vec3 p = texture(prev, fc/asp+0.5).rgb*0.93;
+  vec3 skyTop = vec3(0.1,0.25,0.6), skyBot = vec3(0.5,0.7,0.9);
+  vec3 add = mix(skyBot, skyTop, uv.y) * 0.03;
+  float cl = 0.;
+  for(float k=1.; k<4.; k++){ vec2 q = vec2(uv.x*res.x/res.y*k, uv.y*k + t*0.4*k); cl += (hash(floor(q*6.))-0.5)/k; }
+  add += vec3(0.9,0.95,1.) * smoothstep(0.15,0.4,cl) * 0.02;
+  float streak = hash(vec2(floor(uv.x*res.x/2.), floor(t*30.)));
+  add += vec3(1.) * step(0.995 - high*0.01, streak) * 0.5;
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    vec2 e = (ev[i].xy-0.5)*asp; e.y += 0.15 - ev[i].z*0.4;
+    vec2 d = c - e;
+    float rad = 0.06 + 0.06*ev[i].z;
+    float canopy = step(0., d.y) * smoothstep(rad, rad-0.01, length(d)) ;
+    float rib = 0.5+0.5*sin(atan(d.y,d.x)*14.);
+    float lines = step(abs(d.x*0.5 + (d.y+rad)*0.), 0.002) * step(-rad*2.5, d.y) * step(d.y, 0.);
+    add += hsv(ev[i].w, 0.7, 1.0) * (canopy*(0.6+0.4*rib) + lines*0.4) * (1.-ev[i].z*ev[i].z) * 0.5;
+  }
+  o = vec4(p+add,1.);
+}`;
+
+// Starfield warp with a chunky neon LED spectrum across the middle. Gold, blue, magenta.
+const STELLA = HEAD + `
+void main(){
+  vec2 asp = vec2(res.x/res.y,1.);
+  vec2 c = (uv-0.5)*asp;
+  float zoom = 0.97 - bass*0.02;
+  vec2 fc = c*zoom;
+  vec3 p = texture(prev, fc/asp+0.5).rgb*0.8;
+  vec3 gold = vec3(1.0,0.75,0.2), blue = vec3(0.2,0.5,1.0), mag = vec3(1.0,0.2,0.7);
+  vec3 add = vec3(0);
+  vec2 sq = floor(c*60. + 0.5);
+  float star = step(0.995, hash(sq + floor(t*0.1)));
+  add += mix(gold, blue, hash(sq)) * star * 0.6;
+  float cell = 20.;
+  float col = floor(uv.x*cell);
+  float band = col/cell;
+  float level = band < 0.33 ? bass : band < 0.66 ? mid : high;
+  level = level*1.4 + 0.15*sin(col*1.7 + t*3.);
+  float row = floor((uv.y-0.35)*30.);
+  float lit = step(row, level*9.) * step(0., row);
+  vec2 g = fract(vec2(uv.x*cell, (uv.y-0.35)*30.));
+  float pad = step(0.15,g.x)*step(g.x,0.85)*step(0.15,g.y)*step(g.y,0.85);
+  vec3 ledCol = row > 6. ? mag : row > 3. ? gold : blue;
+  add += ledCol * lit * pad * 0.3;
+  for(int i=0;i<8;i++){
+    if(ev[i].z<=0.0) continue;
+    vec2 d = c - (ev[i].xy-0.5)*asp;
+    float ring = abs(length(d) - ev[i].z*0.8);
+    add += mix(gold, mag, ev[i].w) * exp(-ring*ring*3000.) * (1.-ev[i].z) * 0.4;
+  }
+  add += gold * exp(-dot(c,c)*6.) * beat * 0.3;
+  o = vec4(p+add,1.);
+}`;
+
 export const PRESETS: { name: string; fs: string }[] = [
   { name: 'Kaleidoscope', fs: KALEIDO },
   { name: 'Kid Amoeba', fs: AMOEBA },
   { name: 'Nine Inch Trails', fs: TRAILS },
   { name: 'Acid Haus', fs: HAUS },
   { name: 'Seven Notion Army', fs: ARMY },
+  { name: 'Kerala Dusk', fs: DUSK },
+  { name: 'The Parachute Pending', fs: PARACHUTE },
+  { name: 'Interstella 5556', fs: STELLA },
 ];
 
 const BLIT = `#version 300 es
