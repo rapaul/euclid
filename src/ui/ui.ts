@@ -44,7 +44,7 @@ export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
   seed.onclick = () => { engine.tracks.forEach((t) => t.update({ rotate: Math.floor(Math.random() * t.params.steps), hits: 1 + Math.floor(Math.random() * t.params.steps * 0.6) })); render(); commit(); };
   const bassline = btn('bassline', '♪ New Baseline', 'Generate a new bassline (B)');
   bassline.onclick = () => { engine.tracks.forEach((t) => t.reseedWalk()); commit(); };
-  const randomBass = btn('random-bass', '~ Random Baseline', 'Toggle live random-walk bassline (M)');
+  const randomBass = btn('random-bass', '~ Random Baseline', 'Toggle live random-walk bassline (N)');
   const pitched = () => engine.tracks.filter((t) => t.phrase.length);
   randomBass.onclick = () => { const on = !pitched()[0]?.params.randomWalk; pitched().forEach((t) => t.update({ randomWalk: on })); render(); commit(); };
   const undo = btn('undo', '↶ Undo', 'Undo (Ctrl+Z)');
@@ -54,7 +54,7 @@ export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
   const reset = btn('reset', '⟲ Reset', 'Revert to defaults');
   reset.onclick = () => { engine.restore(structuredClone(initial)); render(); commit(); };
 
-  const vizBtn = btn('viz-preset', viz?.presetName ?? '', 'Next visualisation (N)');
+  const vizBtn = btn('viz-preset', viz?.presetName ?? '', 'Next visualisation (V)');
   vizBtn.className = 'viz-name';
   vizBtn.onclick = () => { if (!viz) return; viz.nextPreset(); vizBtn.textContent = viz.presetName; };
   if (!viz) vizBtn.hidden = true;
@@ -125,8 +125,8 @@ export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
     else if (e.key.toLowerCase() === 't') tap.click();
     else if (e.key.toLowerCase() === 'r') seed.click();
     else if (e.key.toLowerCase() === 'b') bassline.click();
-    else if (e.key.toLowerCase() === 'm') randomBass.click();
-    else if (e.key.toLowerCase() === 'n' || e.key.toLowerCase() === 'v') vizBtn.click();
+    else if (e.key.toLowerCase() === 'n') randomBass.click();
+    else if (e.key.toLowerCase() === 'v') vizBtn.click();
   });
 
   /** Cheap per-frame update: only toggles the `cur` class. */
