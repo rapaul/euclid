@@ -17,18 +17,6 @@ export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
 
   const bpm = num('bpm', 40, 240, engine.bpm);
   bpm.onchange = () => { engine.bpm = clamp(Number(bpm.value) || 120, 40, 240); bpm.value = String(engine.bpm); commit(); };
-  const tap = btn('tap', 'Tap', 'Tap tempo (T)');
-  const taps: number[] = [];
-  tap.onclick = () => {
-    const now = performance.now();
-    if (taps.length && now - taps[taps.length - 1] > 2000) taps.length = 0;
-    taps.push(now);
-    if (taps.length >= 2) {
-      const iv = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
-      engine.bpm = clamp(Math.round(60000 / iv), 40, 240); bpm.value = String(engine.bpm); commit();
-    }
-    if (taps.length > 8) taps.shift();
-  };
 
   const swing = range('swing', 0, 1, 0.01, engine.swing);
   swing.oninput = () => { engine.swing = Number(swing.value); };
@@ -60,7 +48,7 @@ export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
   if (!viz) vizBtn.hidden = true;
 
   transport.append(
-    play, group(bpm, label('bpm', tap)), group(label('swing', swing), label('vol', vol), label('reverb', rev)),
+    play, group(label('bpm', bpm)), group(label('swing', swing), label('vol', vol), label('reverb', rev)),
     sep(), seed, bassline, randomBass, undo, redo, reset, vizBtn,
   );
 
@@ -118,7 +106,7 @@ export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
 
   // ── shortcut help ─────────────────────────────────────────────────────────
   const SHORTCUTS: [string, string][] = [
-    ['Space', 'Play / Stop'], ['T', 'Tap tempo'], ['R', 'Reseed all patterns'],
+    ['Space', 'Play / Stop'], ['R', 'Reseed all patterns'],
     ['N', 'New baseline'], ['B', 'Toggle random baseline'], ['V', 'Next visualisation'],
     ['Ctrl+Z', 'Undo'], ['Ctrl+Shift+Z / Ctrl+Y', 'Redo'], ['?', 'Show / hide this help'], ['Esc', 'Close this help'],
   ];
@@ -133,19 +121,33 @@ export function buildUI(root: HTMLElement, engine: Engine, viz?: Viz) {
   helpBtn.onclick = () => { help.hidden = !help.hidden; };
   transport.append(helpBtn);
 
+  // ── auto-hide after inactivity ───────────────────────────────────────────
+  const IDLE_MS = 30_000;
+  let idleTimer = 0;
+  const wake = () => {
+    root.classList.remove('idle'); document.body.classList.remove('idle');
+    clearTimeout(idleTimer);
+    idleTimer = window.setTimeout(() => { if (help.hidden) { root.classList.add('idle'); document.body.classList.add('idle'); } }, IDLE_MS);
+  };
+  // Keys are handled in the shortcut listener so V can cycle visuals without waking the UI.
+  for (const evName of ['pointermove', 'pointerdown', 'wheel', 'touchstart'] as const) {
+    window.addEventListener(evName, wake, { passive: true });
+  }
+  wake();
+
   // ── keyboard ──────────────────────────────────────────────────────────────
   window.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'v' && !e.ctrlKey && !e.metaKey && (e.target as HTMLElement).tagName !== 'INPUT') { vizBtn.click(); return; }
+    wake();
     if (e.key === '?') { e.preventDefault(); helpBtn.click(); return; }
     if (e.key === 'Escape' && !help.hidden) { help.hidden = true; return; }
     if ((e.target as HTMLElement).tagName === 'INPUT' && e.key !== 'Escape') return;
     if (e.code === 'Space') { e.preventDefault(); play.click(); }
     else if (e.key.toLowerCase() === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); (e.shiftKey ? redo : undo).click(); }
     else if (e.key.toLowerCase() === 'y' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); redo.click(); }
-    else if (e.key.toLowerCase() === 't') tap.click();
     else if (e.key.toLowerCase() === 'r') seed.click();
     else if (e.key.toLowerCase() === 'n') bassline.click();
     else if (e.key.toLowerCase() === 'b') randomBass.click();
-    else if (e.key.toLowerCase() === 'v') vizBtn.click();
   });
 
   /** Cheap per-frame update: only toggles the `cur` class. */

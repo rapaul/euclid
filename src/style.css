@@ -2,7 +2,9 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; display: flex; flex-direction: column; background: var(--bg); color: var(--fg); font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; overflow: hidden; }
 #viz { display: block; position: fixed; inset: 0; width: 100vw; height: 100vh; }
-#ui { position: fixed; left: 0; right: 0; bottom: 0; max-height: 50vh; overflow: auto; padding: 6px 12px 8px; display: grid; grid-template-rows: auto auto; gap: 6px; background: rgba(14,14,26,.72); backdrop-filter: blur(6px); border-top: 1px solid rgba(44,44,74,.6); }
+#ui { position: fixed; left: 0; right: 0; bottom: 0; max-height: 50vh; overflow: auto; padding: 6px 12px 8px; display: grid; grid-template-rows: auto auto; gap: 6px; background: rgba(14,14,26,.72); backdrop-filter: blur(6px); border-top: 1px solid rgba(44,44,74,.6); transition: transform .6s cubic-bezier(.4,0,.2,1); }
+#ui.idle { transform: translateY(100%); }
+body.idle { cursor: none; }
 .transport { display: flex; gap: 12px; align-items: center; }
 button { background: rgba(22,22,42,.75); color: var(--fg); border: 1px solid #2c2c4a; padding: 3px 10px; border-radius: 6px; cursor: pointer; font: inherit; }
 button:hover { border-color: var(--acc); }
@@ -22,10 +24,11 @@ button.pulse { animation: pulse .3s ease-out; }
 .track:not(.head) .params { padding-bottom: 0; }
 .params label { display: flex; flex-direction: column; align-items: center; font-size: 10px; gap: 0; line-height: 1; }
 input[type=range] { width: 70px; height: 14px; margin: 0; accent-color: var(--acc); }
-input[type=number] { width: 56px; background: rgba(22,22,42,.75); color: var(--fg); border: 1px solid #2c2c4a; border-radius: 4px; padding: 3px; font: inherit; }
+.transport input[type=range] { width: 56px; }
+input[type=number] { width: 52px; background: rgba(22,22,42,.75); color: var(--fg); border: 1px solid #2c2c4a; border-radius: 6px; padding: 3px 6px; font: inherit; text-align: center; }
 .transport { flex-wrap: wrap; gap: 8px; }
-.transport .group { display: flex; gap: 8px; align-items: center; }
-.transport label { display: flex; flex-direction: column; align-items: center; font-size: 10px; line-height: 1; color: var(--dim); gap: 1px; }
+.transport .group { display: flex; gap: 10px; align-items: center; }
+.transport label { display: flex; flex-direction: row-reverse; align-items: center; gap: 5px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
 .transport .viz-name { margin-left: auto; flex: 0 0 auto; color: var(--dim); border-style: dashed; }
 .transport .viz-name:hover { color: var(--fg); }
 .transport .sep { width: 1px; height: 20px; background: #2c2c4a; margin: 0 4px; }
