@@ -435,8 +435,8 @@ void main(){
   float rot = 0.0015 + mid*0.006;
   mat2 R = mat2(cos(rot),-sin(rot),sin(rot),cos(rot));
   vec3 p = texture(prev, (R*c*zoom)/asp+0.5).rgb*0.86;
-  p = mix(p, p*vec3(0.9,0.95,1.1), 0.05);
-  vec3 indigo = vec3(0.2,0.15,0.7), gold = vec3(1.0,0.8,0.35), teal = vec3(0.1,0.7,0.7);
+  p *= vec3(1.0,0.86,0.94);
+  vec3 indigo = vec3(0.35,0.2,0.95), gold = vec3(1.0,0.55,0.1), teal = vec3(0.85,0.08,0.15), cyan = vec3(0.55,0.85,1.0);
   float seg = 7.0;
   float r = length(c), a = atan(c.y,c.x) + t*0.05;
   float ka = mod(a, 2.*PI/seg); ka = abs(ka - PI/seg);
@@ -446,7 +446,8 @@ void main(){
   vec2 z = k*3.;
   float fil = 0.;
   for(int i=0;i<5;i++){ z = abs(z)/dot(z,z) - vec2(0.9+breath*0.1, 0.6); fil += smoothstep(0.03,0.0,abs(z.x)) + smoothstep(0.03,0.0,abs(z.y)); }
-  add += mix(indigo, teal, r*1.5) * min(fil,2.) * 0.01 * (0.5+mid) * smoothstep(0.05,0.2,r);
+  add += mix(teal, indigo, smoothstep(0.1,0.6,r)) * min(fil,2.) * 0.035 * (0.5+mid) * smoothstep(0.05,0.2,r);
+  add += indigo * exp(-r*r*2.5) * 0.012 * (0.5+breath);
   // concentric rings that breathe
   float ring = abs(fract(r*6. - breath*0.5) - 0.5);
   add += gold * smoothstep(0.05,0.0,ring) * 0.008 * smoothstep(0.7,0.2,r);
@@ -459,15 +460,16 @@ void main(){
   float eye = smoothstep(0.005,0.0,lid) * step(abs(c.x), 0.29);
   float iris = smoothstep(0.08,0.07,r) * eye;
   float pupil = smoothstep(0.035,0.03,r) * eye;
-  add += gold * eye * 0.01 + mix(gold, teal, smoothstep(0.03,0.08,r)) * iris * (1.-pupil) * 0.12 * (0.5+bass);
-  add += gold * smoothstep(0.006,0.0,abs(lid)) * step(abs(c.x),0.29) * 0.15;
+  add += vec3(0.9) * eye * 0.01 + mix(cyan, indigo, smoothstep(0.035,0.08,r)) * iris * (1.-pupil) * 0.14 * (0.5+bass);
+  add += vec3(0.95) * smoothstep(0.006,0.0,abs(lid)) * step(abs(c.x),0.29) * 0.12;
+  add += mix(gold, vec3(1.0,0.9,0.5), bass) * exp(-r*r*40.) * (0.02 + bass*0.08);
   // events: petals blooming outward on the fold
   for(int i=0;i<8;i++){
     if(ev[i].z<=0.0) continue;
     float pr = 0.12 + ev[i].z*0.55;
     vec2 d = k - vec2(cos(PI/seg*0.5), sin(PI/seg*0.5))*pr;
     float petal = exp(-dot(d,d)*1500.) ;
-    add += mix(gold, teal, ev[i].w) * petal * (1.-ev[i].z) * 0.08;
+    add += mix(gold, teal, ev[i].w) * petal * (1.-ev[i].z) * 0.06;
   }
   add -= vec3(0.01)*r*r;
   o = vec4(max(p+add,0.),1.);
