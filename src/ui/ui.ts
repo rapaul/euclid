@@ -83,6 +83,15 @@ export function buildUI(root: HTMLElement, engine: Engine) {
   });
   root.append(transport, tracks);
 
+  // Pulse any button on activation (mouse, keyboard, or programmatic .click()).
+  root.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest('button');
+    if (!b) return;
+    b.classList.remove('pulse'); void b.offsetWidth; // restart animation on rapid presses
+    b.classList.add('pulse');
+    b.addEventListener('animationend', () => b.classList.remove('pulse'), { once: true });
+  });
+
   function render() {
     rows.forEach(({ steps, t, inputs }) => {
       steps.innerHTML = '';

@@ -7,6 +7,9 @@ html, body { margin: 0; height: 100%; display: flex; flex-direction: column; bac
 button { background: #16162a; color: var(--fg); border: 1px solid #2c2c4a; padding: 3px 10px; border-radius: 6px; cursor: pointer; font: inherit; }
 button:hover { border-color: var(--acc); }
 button[aria-pressed="true"] { background: var(--acc); color: #000; border-color: var(--acc); }
+button.pulse { animation: pulse .3s ease-out; }
+@keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 var(--acc); } 50% { transform: scale(1.08); } 100% { transform: scale(1); box-shadow: 0 0 0 10px transparent; } }
+@media (prefers-reduced-motion: reduce) { button.pulse { animation: none; } }
 .tracks { display: grid; gap: 4px; align-content: start; }
 .track { display: grid; grid-template-columns: 90px 1fr auto; gap: 10px; align-items: center; padding: 4px 8px; background: #0e0e1a; border: 1px solid #1c1c30; border-radius: 8px; }
 .track .name { font-weight: 600; }
